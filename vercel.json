@@ -1,4 +1,3 @@
 {
-    "buildCommand": "pnpm prisma generate && pnpm run build",
-    "ignoreBuildStep": false
+    "buildCommand": "pnpm prisma generate && pnpm run build"
 }
