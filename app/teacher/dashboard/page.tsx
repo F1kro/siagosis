@@ -32,7 +32,7 @@ export default async function TeacherDashboard() {
   }
 
   // Get classes taught by this teacher
-  const classSubjects = await db.classSubject.findMany({
+  const classSubjects: { id: string; classId: string; class: { name: string } }[] = await db.classSubject.findMany({
     where: {
       subjectId: teacher.subjectId,
     },
@@ -41,7 +41,7 @@ export default async function TeacherDashboard() {
     },
   })
 
-  const classIds = classSubjects.map((cs) => cs.classId)
+  const classIds = classSubjects.map((cs: { classId: string }) => cs.classId)
 
   // Get total students in these classes
   const totalStudents = await db.student.count({
@@ -53,27 +53,38 @@ export default async function TeacherDashboard() {
   })
 
   // Get recent attendance records
-  const recentAttendance = await db.attendance.findMany({
-    where: {
-      teacherId: teacher.id,
-    },
-    include: {
-      student: {
-        include: {
-          user: true,
-          class: true,
-        },
+  const recentAttendance = (await db.attendance.findMany({
+      where: {
+        teacherId: teacher.id,
       },
-      subject: true,
-    },
-    orderBy: {
-      date: "desc",
-    },
-    take: 5,
-  })
+      include: {
+        student: {
+          include: {
+            user: true,
+            class: true,
+          },
+        },
+        subject: true,
+      },
+      orderBy: {
+        date: "desc",
+      },
+      take: 5,
+    })).map((record) => ({
+      ...record,
+      date: record.date.toISOString(),
+    }))
 
   // Get recent grades
-  const recentGrades = await db.grade.findMany({
+  const recentGrades: {
+    id: string;
+    student: {
+      user: { name: string };
+      class: { name: string };
+    };
+    type: string;
+    value: number;
+  }[] = await db.grade.findMany({
     where: {
       teacherId: teacher.id,
     },
@@ -158,7 +169,7 @@ export default async function TeacherDashboard() {
             <CardContent>
               {recentAttendance.length > 0 ? (
                 <div className="space-y-4">
-                  {recentAttendance.map((record) => (
+                  {recentAttendance.map((record: { id: string; student: { user: { name: string }; class: { name: string } }; date: string; status: string }) => (
                     <div key={record.id} className="flex justify-between items-center border-b pb-2">
                       <div>
                         <p className="font-medium">{record.student.user.name}</p>
@@ -168,7 +179,7 @@ export default async function TeacherDashboard() {
                       </div>
                       <Badge
                         variant={
-                          record.status === "present" ? "default" : record.status === "late" ? "warning" : "destructive"
+                          record.status === "present" ? "default" : record.status === "late" ? "outline" : "destructive"
                         }
                       >
                         {record.status}
@@ -268,7 +279,7 @@ export default async function TeacherDashboard() {
             <CardContent>
               {classSubjects.length > 0 ? (
                 <div className="space-y-2">
-                  {classSubjects.map((cs) => (
+                  {classSubjects.map((cs: { id: string; classId: string; class: { name: string } }) => (
                     <div key={cs.id} className="flex justify-between items-center border-b pb-2">
                       <p>{cs.class.name}</p>
                       <Button asChild size="sm" variant="ghost">
